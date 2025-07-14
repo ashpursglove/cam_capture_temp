@@ -17,6 +17,7 @@ class WebcamApp(QWidget):
         self.init_camera()
 
         self.label = QLabel(self)
+        self.label.setFixedSize(480, 360)  # Smaller display preview
         self.mode_selector = QComboBox(self)
         self.mode_selector.addItems(["Image", "Video"])
         self.capture_button = QPushButton("Capture", self)
@@ -39,10 +40,11 @@ class WebcamApp(QWidget):
         os.makedirs(self.output_folder, exist_ok=True)
 
         self.setWindowTitle("Webcam Capture")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 500, 460)  # Smaller window
+
 
     def init_camera(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture('/dev/video0', cv2.CAP_V4L2)
         if not self.cap.isOpened():
             print("Error: Could not open webcam.")
             sys.exit()
@@ -62,15 +64,26 @@ class WebcamApp(QWidget):
             if (actual_w, actual_h) == (w, h):
                 print(f"Using resolution: {w}x{h}")
                 break
-
+                
+                
+                
+                
+                
+                
+                
+                
     def update_frame(self):
         if self.cap and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = frame.shape
-                q_img = QImage(frame.data, w, h, ch * w, QImage.Format_RGB888)
+                # Convert and resize for preview only
+                preview = cv2.resize(frame, (480, 360), interpolation=cv2.INTER_AREA)
+                preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGB)
+                h, w, ch = preview.shape
+                q_img = QImage(preview.data, w, h, ch * w, QImage.Format_RGB888)
                 self.label.setPixmap(QPixmap.fromImage(q_img))
+
+
 
     def handle_capture(self):
         mode = self.mode_selector.currentText()
@@ -98,9 +111,12 @@ class WebcamApp(QWidget):
             'ffmpeg',
             '-y',
             '-f', 'v4l2',
+            '-framerate', '30',
+            '-input_format', 'mjpeg',
+            '-video_size', '1920x1080',
             '-i', '/dev/video0',
             '-f', 'alsa',
-            '-i', 'hw:1',
+            '-i', 'hw:2,0',
             '-map', '0:v:0',
             '-map', '1:a:0',
             '-vcodec', 'libx264',
@@ -148,3 +164,8 @@ if __name__ == "__main__":
     window = WebcamApp()
     window.show()
     sys.exit(app.exec_())
+    
+    
+    
+    
+
